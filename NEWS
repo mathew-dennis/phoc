@@ -1,0 +1,27 @@
+phoc 0.25.2
+-----------
+Released March 2023
+* Fix display not coming up again after fast
+  blank/unblank on some devices like PP and PPP.
+
+phoc 0.25.0
+-----------
+Released February 2023
+* Allow client to handle the power key
+* Allow to render notches and cutouts
+* Contributors:
+	Guido Günther
+
+phoc 0.24.0
+-----------
+Released January 2023
+* LayerSurface(effects) robustness
+* Contributors:
+	Guido Günther
+
+phoc 0.23.0
+-----------
+Released January 2023
+* Fix pixman renderer
+* Contributors:
+	Guido Günther

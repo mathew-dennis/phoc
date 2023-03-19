@@ -10,7 +10,7 @@
 
 #define G_LOG_DOMAIN "phoc-render"
 
-#include "config.h"
+#include "phoc-config.h"
 #include "layers.h"
 #include "seat.h"
 #include "server.h"
@@ -600,16 +600,20 @@ view_render_iterator (struct wlr_surface *surface, int sx, int sy, void *_data)
   wlr_render_subtexture_with_matrix (self->wlr_renderer, texture, &src_box, mat, 1.0);
 }
 
+
 gboolean
-phoc_renderer_render_view_to_buffer (PhocRenderer *self,
-                                     PhocView     *view,
-                                     enum wl_shm_format shm_fmt,
-                                     int           width,
-                                     int           height,
-                                     int           stride,
-                                     uint32_t     *flags,
-                                     void         *data)
+phoc_renderer_render_view_to_buffer (PhocRenderer         *self,
+                                     PhocView             *view,
+                                     struct wl_shm_buffer *shm_buffer,
+                                     uint32_t             *flags)
 {
+  g_return_val_if_fail (shm_buffer, false);
+
+  enum wl_shm_format shm_fmt = wl_shm_buffer_get_format (shm_buffer);
+  int32_t width = wl_shm_buffer_get_width (shm_buffer);
+  int32_t height = wl_shm_buffer_get_height (shm_buffer);
+  int32_t stride = wl_shm_buffer_get_stride (shm_buffer);
+
 #if WLR_VERSION_MAJOR == 0 && WLR_VERSION_MINOR > 12
   struct wlr_surface *surface = view->wlr_surface;
   struct wlr_buffer *buffer;
@@ -637,11 +641,17 @@ phoc_renderer_render_view_to_buffer (PhocRenderer *self,
   wlr_renderer_begin_with_buffer (self->wlr_renderer, buffer);
   wlr_renderer_clear (self->wlr_renderer, (float[])COLOR_TRANSPARENT);
   wlr_surface_for_each_surface (surface, view_render_iterator, &render_data);
+
+  wl_shm_buffer_begin_access (shm_buffer);
+  void *data = wl_shm_buffer_get_data (shm_buffer);
+
   wlr_renderer_read_pixels (self->wlr_renderer, DRM_FORMAT_ARGB8888, NULL, stride, width, height, 0, 0, 0, 0, data);
   wlr_renderer_end (self->wlr_renderer);
 
   wlr_buffer_drop (buffer);
   wlr_drm_format_set_finish (&fmt_set);
+
+  wl_shm_buffer_end_access(shm_buffer);
 
   return true;
 #else
@@ -684,7 +694,12 @@ phoc_renderer_render_view_to_buffer (PhocRenderer *self,
   wlr_surface_for_each_surface (surface, view_render_iterator, &render_data);
   wlr_renderer_end (self->wlr_renderer);
 
+  wl_shm_buffer_begin_access (shm_buffer);
+  void *data = wl_shm_buffer_get_data (shm_buffer);
+
   wlr_renderer_read_pixels (self->wlr_renderer, shm_fmt, flags, stride, width, height, 0, 0, 0, 0, data);
+
+  wl_shm_buffer_end_access(shm_buffer);
 
   glDeleteFramebuffers (1, &fbo);
   glDeleteTextures (1, &tex);
